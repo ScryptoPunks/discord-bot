@@ -1,14 +1,14 @@
-from dotenv import load_dotenv, find_dotenv
 from random import randint
 import requests
 import disnake
-import os
 from disnake.ext import commands
 
-load_dotenv(find_dotenv())
+NAME=""
+WALLET=""
+TOKEN_RRI=""
+BOT_KEY=""
+GUILD_ID=0
 
-wallet = os.environ.get("WALLET")
-token_rri = os.environ.get("TOKEN_RRI")
 transactions = "https://mainnet.radixdlt.com/account/transactions"
 balances = "https://mainnet.radixdlt.com/account/balances"
 headers = {'Content-Type': 'application/json',
@@ -16,7 +16,7 @@ headers = {'Content-Type': 'application/json',
 
 bot = commands.Bot(
     command_prefix='/',
-    test_guilds=[os.environ.get("GUILD_ID")]
+    test_guilds=[GUILD_ID]
 )
 
 
@@ -27,12 +27,12 @@ async def verify(inter, address):
             "POST", transactions, headers=headers, data=get_payload(address)).json()
         verified = False
         for tx in txs["transactions"]:
-            if tx["actions"][0]["to_account"]["address"] == wallet:
+            if tx["actions"][0]["to_account"]["address"] == WALLET:
                 if "message" in tx["metadata"] and check_message(str(inter.author), tx["metadata"]["message"]):
                     tokens = requests.request(
                         "POST", balances, headers=headers, data=get_payload(address)).json()
                     for token in tokens["account_balances"]["liquid_balances"]:
-                        if token["token_identifier"]["rri"] == token_rri:
+                        if token["token_identifier"]["rri"] == TOKEN_RRI:
                             verified = True
                             verified_role = 939579133476868127
                             balance = int(
@@ -59,7 +59,7 @@ async def verify(inter, address):
             emb = disnake.Embed()
             emb.title = "Could not find transaction"
             emb.color = 0xFF0000
-            emb.description = f"Make sure you send **1 XRD** to the [{os.environ.get('NAME')} wallet](https://explorer.radixdlt.com/#/accounts/{wallet}) with **{inter.author}** in the message field"
+            emb.description = f"Make sure you send **1 XRD** to the [{NAME} wallet](https://explorer.radixdlt.com/#/accounts/{WALLET}) with **{inter.author}** in the message field"
             await inter.response.send_message(embed=emb)
 
     else:
@@ -95,4 +95,4 @@ def check_message(author, msg):
     return author in decoded_1 or author in decoded_2
 
 
-bot.run(os.environ.get("BOT_KEY"))
+bot.run(BOT_KEY)
