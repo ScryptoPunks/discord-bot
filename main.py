@@ -1,13 +1,7 @@
-from random import randint
+import config
 import requests
 import disnake
 from disnake.ext import commands
-
-NAME=""
-WALLET=""
-TOKEN_RRI=""
-BOT_KEY=""
-GUILD_ID=0
 
 transactions = "https://mainnet.radixdlt.com/account/transactions"
 balances = "https://mainnet.radixdlt.com/account/balances"
@@ -16,50 +10,45 @@ headers = {'Content-Type': 'application/json',
 
 bot = commands.Bot(
     command_prefix='/',
-    test_guilds=[GUILD_ID]
+    test_guilds=[config.SERVER_ID]
 )
 
 
-@bot.slash_command(description="Link your Discord account to your Radix wallet")
+@bot.slash_command(description="Link your Discord account to your Radix address")
 async def verify(inter, address):
     if address.startswith("rdx") and len(address) == 65:
         txs = requests.request(
             "POST", transactions, headers=headers, data=get_payload(address)).json()
         verified = False
         for tx in txs["transactions"]:
-            if tx["actions"][0]["to_account"]["address"] == WALLET:
+            if tx["actions"][0]["to_account"]["address"] == config.VERIFICATION_ADDRESS:
                 if "message" in tx["metadata"] and check_message(str(inter.author), tx["metadata"]["message"]):
                     tokens = requests.request(
                         "POST", balances, headers=headers, data=get_payload(address)).json()
                     for token in tokens["account_balances"]["liquid_balances"]:
-                        if token["token_identifier"]["rri"] == TOKEN_RRI:
+                        if token["token_identifier"]["rri"] == config.TOKEN_RRI:
                             verified = True
-                            verified_role = 939579133476868127
                             balance = int(
                                 token["value"]) // 10 ** 18
-                            if balance >= 50:
-                                additional_role = 939579431897432085
-                                additional_channel = 946083865435463710
-                            elif balance >= 5:
-                                additional_role = 939580638644813895
-                                additional_channel = 946084021157392424
-                            else:
-                                additional_role = 939579533298905088
-                                additional_channel = 946084151910604830
-                            dao_channel = 946084422338355320
-                            await inter.author.add_roles(inter.guild.get_role(verified_role), inter.guild.get_role(additional_role))
+
+                            for status in config.ADDITIONAL:
+                                if balance >= status["limit"]:
+                                    additional_role = status["role"]
+                                    additional_channel = status["channel"]
+                                    break
+                            await inter.author.add_roles(inter.guild.get_role(config.VERIFIED_ROLE_ID), inter.guild.get_role(additional_role))
 
                             emb = disnake.Embed()
                             emb.color = 0x00FF00
                             emb.title = "Address verified"
-                            emb.description = f"You now have access to the <#{dao_channel}> and <#{additional_channel}> channels!"
+                            emb.description = f"You now have access to the <#{config.VERFIED_CHANNEL_ID}> and <#{additional_channel}> channels!"
                             await inter.response.send_message(embed=emb)
 
         if not verified:
             emb = disnake.Embed()
-            emb.title = "Could not find transaction"
+            emb.title = "Could not verify address"
             emb.color = 0xFF0000
-            emb.description = f"Make sure you send **1 XRD** to the [{NAME} wallet](https://explorer.radixdlt.com/#/accounts/{WALLET}) with **{inter.author}** in the message field"
+            emb.description = f"Make sure that: \n1. you hold at least **1 SPUNKS** token \n2. you sent **1 XRD** to the [{config.PROJECT_NAME} wallet](https://explorer.radixdlt.com/#/accounts/{config.PROJECT_NAME}) with **{inter.author}** in the message field"
             await inter.response.send_message(embed=emb)
 
     else:
@@ -78,21 +67,20 @@ def get_payload(address):
             "account_identifier": {{
                 "address": "{address}"
             }},
-            "cursor": "0",
             "limit": 5
         }}
     """
 
 
 def check_message(author, msg):
-    decoded_1 = bytes.fromhex(msg).decode("utf-8")
+    decoded_1 = bytes.fromhex(msg).decode("utf-8").replace("\x00", "")
 
-    # Fix for the old transaction model
+    # Fix for old transaction model
     decoded_2 = ""
     if decoded_1.startswith("00"):
-        decoded_2 = bytes.fromhex(decoded_1).decode("utf-8")
+        decoded_2 = bytes.fromhex(decoded_1).decode("utf-8").replace("\x00", "")
 
-    return author in decoded_1 or author in decoded_2
+    return author == decoded_1 or author == decoded_2
 
 
-bot.run(BOT_KEY)
+bot.run(config.BOT_KEY)
