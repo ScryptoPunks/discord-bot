@@ -28,27 +28,18 @@ async def verify(inter, address):
                     for token in tokens["account_balances"]["liquid_balances"]:
                         if token["token_identifier"]["rri"] == config.TOKEN_RRI:
                             verified = True
-                            balance = int(
-                                token["value"]) // 10 ** 18
-
-                            for status in config.ADDITIONAL:
-                                if balance >= status["limit"]:
-                                    additional_role = status["role"]
-                                    additional_channel = status["channel"]
-                                    break
-                            await inter.author.add_roles(inter.guild.get_role(config.VERIFIED_ROLE_ID), inter.guild.get_role(additional_role))
 
                             emb = disnake.Embed()
                             emb.color = 0x00FF00
                             emb.title = "Address verified"
-                            emb.description = f"You now have access to the <#{config.VERFIED_CHANNEL_ID}> and <#{additional_channel}> channels!"
+                            emb.description = f"You now have access to <#{config.VERFIED_CHANNEL_ID}>!"
                             await inter.response.send_message(embed=emb)
 
         if not verified:
             emb = disnake.Embed()
             emb.title = "Could not verify address"
             emb.color = 0xFF0000
-            emb.description = f"Make sure that: \n1. you hold at least **1 SPUNKS** token \n2. you sent **1 XRD** to the [{config.PROJECT_NAME} wallet](https://explorer.radixdlt.com/#/accounts/{config.PROJECT_NAME}) with **{inter.author}** in the message field"
+            emb.description = f"Make sure that: \n1. you hold at least **1 SPUNKS** token \n2. you sent **1 XRD** to the [{config.VERIFICATION_ADDRESS} wallet](https://explorer.radixdlt.com/#/accounts/{config.PROJECT_NAME}) with **{inter.author}** in the message field"
             await inter.response.send_message(embed=emb)
 
     else:
