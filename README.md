@@ -15,6 +15,12 @@ To get a local copy up and running follow these simple example steps.
    ```
 3. Edit `config.py`
 
+<!-- TODO -->
+## TODO
+
+- Store entries in a database and casually check the address still owns the token
+- Auto-delete messages after a certain period of time
+
 <!-- CONTRIBUTING -->
 ## Contributing
 
